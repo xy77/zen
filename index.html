@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>禅道2</title>
+    <title>222</title>
     <!-- 引入 Tailwind CSS 进行页面布局美化 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 TinyMCE -->
@@ -38,7 +38,7 @@
         <!-- 头部 -->
         <div class="bg-blue-600 text-white p-4 flex justify-between items-center shrink-0">
             <div>
-                <h1 class="text-xl font-bold">禅道兼容需求编辑器</h1>
+                <h1 class="text-xl font-bold"></h1>
                 <p class="text-blue-100 text-sm mt-1">编写内容 -> 一键全选复制 -> 粘贴至禅道</p>
             </div>
             <div class="text-xs bg-blue-700 px-3 py-1 rounded text-blue-200">
@@ -61,7 +61,7 @@
         <!-- 底部操作栏 -->
         <div class="bg-gray-50 border-t border-gray-200 p-4 shrink-0 flex justify-end items-center gap-3">
             <span id="msg" class="text-green-600 text-sm font-medium toast-hidden">
-                ✅ 已全选并尝试复制！如果粘贴无图，请手动按 Ctrl+C
+                ✅ 已全选并复制！建议先粘贴到 Word 测试是否有图
             </span>
             <button onclick="clearEditor()" class="px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors text-sm font-medium">
                 清空内容
@@ -70,7 +70,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                 </svg>
-                全选并复制
+                暴力复制 (Base64)
             </button>
         </div>
     </div>
@@ -86,14 +86,10 @@
             plugins: 'lists table image link code wordcount',
             toolbar: 'bold italic underline strikethrough | numlist bullist | table image | removeformat code',
             
-            // 核心配置：确保图片保留为 Base64
+            // 核心配置：允许 Base64 进出
             paste_data_images: true,
             automatic_uploads: false,
             images_reuse_filename: false,
-            // 防止 TinyMCE 自动将 base64 转换为 blob url (虽然能提升性能，但会影响复制)
-            images_dataimg_filter: function(img) {
-                return img.hasAttribute('internal-blob'); 
-            },
             
             content_style: `
                 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #333; }
@@ -110,39 +106,72 @@
             const editor = tinymce.get('mytextarea');
             if (!editor) return;
 
-            // 1. 强制刷新内容：将所有 Blob URL 转换为真实的 Base64 数据
-            // TinyMCE 内部通常用 blob 预览，getContent 会返回 base64，我们这里把 DOM 也强刷成 base64
+            // 1. 获取纯净的 HTML (TinyMCE 会自动将图片转为 Base64)
             const content = editor.getContent(); 
-            editor.setContent(content); 
 
-            // 2. 聚焦编辑器并全选
-            editor.focus();
-            editor.selection.select(editor.getBody());
+            // 简单检查：如果 content 里没有 data:image，说明转换失败或没图
+            if (content.includes('<img') && !content.includes('data:image')) {
+                alert('检测到图片可能未正确转换为 Base64 格式，请尝试删除图片重新截图粘贴。');
+            }
 
-            // 3. 尝试浏览器原生复制 (在 iframe 内执行)
-            // 这是最稳妥的方式，相当于你在 Word 里按了 Ctrl+A 然后 Ctrl+C
+            // 2. 创建一个脱离 TinyMCE 控制的原生中转容器
+            // 使用 contentEditable=true 模拟从另一个网页复制的行为
+            const transferDiv = document.createElement('div');
+            transferDiv.contentEditable = "true";
+            transferDiv.style.position = 'fixed';
+            transferDiv.style.left = '0';
+            transferDiv.style.top = '0';
+            // 必须有一定的可见性，有些浏览器忽略完全透明元素的复制
+            transferDiv.style.opacity = '0.01'; 
+            transferDiv.style.zIndex = '999999';
+            transferDiv.style.width = '100%';
+            transferDiv.style.height = '100%';
+            transferDiv.style.overflow = 'hidden';
+            transferDiv.style.background = 'white';
+            
+            // 注入内容
+            transferDiv.innerHTML = content;
+            document.body.appendChild(transferDiv);
+
+            // 3. 聚焦并全选这个原生容器
+            transferDiv.focus();
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            const range = document.createRange();
+            range.selectNodeContents(transferDiv);
+            selection.addRange(range);
+
+            // 4. 执行复制
             try {
-                const successful = editor.getDoc().execCommand('copy');
+                // 优先使用 execCommand，因为它对富文本（HTML+Base64）的兼容性在某些旧场景下反而更好
+                const successful = document.execCommand('copy');
                 
-                // 4. 双重保障：如果原生复制没报错，我们也尝试用 Clipboard API 写入剪贴板
-                // 这样既照顾了旧浏览器，也照顾了新浏览器的 MIME 类型
+                // 同时尝试 Clipboard API 写入 (现代浏览器)
                 if (navigator.clipboard && navigator.clipboard.write) {
-                    const blobHtml = new Blob([content], { type: 'text/html' });
-                    const blobText = new Blob([editor.getContent({format: 'text'})], { type: 'text/plain' });
-                    await navigator.clipboard.write([
-                        new ClipboardItem({
-                            'text/html': blobHtml,
-                            'text/plain': blobText
-                        })
-                    ]);
+                    try {
+                        const blobHtml = new Blob([content], { type: 'text/html' });
+                        const blobText = new Blob([transferDiv.innerText], { type: 'text/plain' });
+                        await navigator.clipboard.write([
+                            new ClipboardItem({
+                                'text/html': blobHtml,
+                                'text/plain': blobText
+                            })
+                        ]);
+                    } catch(e) {
+                        console.warn('Clipboard API write failed, fallback to execCommand');
+                    }
                 }
                 
                 showToast(successful);
             } catch (err) {
-                console.error('Copy failed:', err);
-                // 即使脚本复制失败，因为内容已经被选中了，用户手动按 Ctrl+C 也能成功
+                console.error('复制过程出错:', err);
                 showToast(false);
             }
+
+            // 5. 稍微延迟后移除容器
+            setTimeout(() => {
+                document.body.removeChild(transferDiv);
+            }, 200);
         }
 
         function clearEditor() {
@@ -151,17 +180,18 @@
             }
         }
 
-        function showToast(autoCopied = true) {
+        function showToast(success = true) {
             const msg = document.getElementById('msg');
-            if (autoCopied) {
-                msg.innerText = "✅ 已全选并复制！请去禅道粘贴";
+            if (success) {
+                msg.innerText = "✅ 已通过原生模式强制复制！请测试粘贴";
+                msg.className = "text-green-600 text-sm font-medium toast-hidden";
             } else {
-                msg.innerText = "⚠️ 自动复制失败，内容已全选，请手动按 Ctrl+C";
+                msg.innerText = "⚠️ 脚本复制被拦截，内容已全选，请手动按 Ctrl+C";
+                msg.className = "text-red-600 text-sm font-medium toast-hidden";
             }
             
             // 重置动画
-            msg.classList.remove('toast-visible');
-            void msg.offsetWidth; // 触发重绘
+            void msg.offsetWidth;
             msg.classList.add('toast-visible');
         }
     </script>
