@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>禅道兼容需求编辑器</title>
+    <title>禅道兼容</title>
     <!-- 引入 Tailwind CSS 进行页面布局美化 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 TinyMCE -->
@@ -30,19 +30,33 @@
             opacity: 1;
             animation: fadeOut 2s ease-in-out 1s forwards;
         }
+        /* 加载遮罩 */
+        #loading-overlay {
+            display: none;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 50;
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- 加载中提示 -->
+    <div id="loading-overlay" class="absolute inset-0 flex items-center justify-center rounded-xl">
+        <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-2"></div>
+            <p class="text-blue-600 font-bold">正在压缩图片并生成代码...</p>
+        </div>
+    </div>
 
     <div class="w-full max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden flex flex-col" style="height: 90vh;">
         <!-- 头部 -->
         <div class="bg-blue-600 text-white p-4 flex justify-between items-center shrink-0">
             <div>
                 <h1 class="text-xl font-bold">禅道兼容需求编辑器</h1>
-                <p class="text-blue-100 text-sm mt-1">编写内容 -> 一键全选复制 -> 粘贴至禅道</p>
+                <p class="text-blue-100 text-sm mt-1">编写内容 -> 智能压缩复制 -> 粘贴至禅道</p>
             </div>
             <div class="text-xs bg-blue-700 px-3 py-1 rounded text-blue-200">
-                支持：加粗/斜体/下划线/删除线/列表/表格/贴图
+                支持：图片自动压缩 (PNG转JPG) 以适应禅道
             </div>
         </div>
 
@@ -53,7 +67,7 @@
                 <p><strong>1. 功能点：</strong></p>
                 <ul>
                     <li>支持直接截图粘贴 (Ctrl+V)</li>
-                    <li>支持表格和列表</li>
+                    <li>点击下方按钮会自动压缩图片体积，防止粘贴失败</li>
                 </ul>
             </textarea>
         </div>
@@ -61,7 +75,7 @@
         <!-- 底部操作栏 -->
         <div class="bg-gray-50 border-t border-gray-200 p-4 shrink-0 flex justify-end items-center gap-3">
             <span id="msg" class="text-green-600 text-sm font-medium toast-hidden">
-                ✅ 已全选并复制！建议先粘贴到 Word 测试是否有图
+                ✅ 已压缩并复制！请去禅道粘贴
             </span>
             <button onclick="clearEditor()" class="px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors text-sm font-medium">
                 清空内容
@@ -70,7 +84,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                 </svg>
-                暴力复制 (Base64)
+                压缩并复制 (推荐)
             </button>
         </div>
     </div>
@@ -86,7 +100,6 @@
             plugins: 'lists table image link code wordcount',
             toolbar: 'bold italic underline strikethrough | numlist bullist | table image | removeformat code',
             
-            // 核心配置：允许 Base64 进出
             paste_data_images: true,
             automatic_uploads: false,
             images_reuse_filename: false,
@@ -102,45 +115,96 @@
             table_default_styles: { 'border-collapse': 'collapse', 'width': '100%' }
         });
 
+        // 将 Base64 图片转换为压缩后的 JPEG Base64
+        function compressImage(imgElement) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // 1. 设置画布尺寸
+                canvas.width = imgElement.naturalWidth;
+                canvas.height = imgElement.naturalHeight;
+
+                // 2. 填充白色背景 (JPEG 不支持透明，避免 PNG 透明变黑)
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // 3. 绘制图片
+                ctx.drawImage(imgElement, 0, 0);
+
+                // 4. 导出为 JPEG，质量 0.7 (兼顾清晰度和体积)
+                // 这一步能让 2MB 的 PNG 变成 200KB 的 JPG，极大增加禅道兼容性
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                resolve(compressedDataUrl);
+            });
+        }
+
         async function copyForZentao() {
             const editor = tinymce.get('mytextarea');
             if (!editor) return;
 
-            // 1. 获取原始内容
-            const rawContent = editor.getContent(); 
+            // 显示 loading
+            document.getElementById('loading-overlay').style.display = 'flex';
 
-            // 2. 【关键步骤】净化 HTML 代码
-            // 禅道编辑器如果看到复杂的 img 属性（如 data-mce-src）可能会直接过滤掉整个图片
-            // 我们需要手动把 HTML 里的 img 标签洗干净，只保留 src
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(rawContent, 'text/html');
-            const images = doc.getElementsByTagName('img');
-            
-            for (let i = 0; i < images.length; i++) {
-                const img = images[i];
-                const src = img.getAttribute('src'); // 获取 Base64
+            try {
+                // 1. 获取编辑器内的所有图片 DOM 节点
+                // 我们直接操作 DOM，比操作字符串更准确
+                const editorBody = editor.getBody();
+                const images = editorBody.querySelectorAll('img');
                 
-                // 移除所有属性
-                while(img.attributes.length > 0) {
-                    img.removeAttribute(img.attributes[0].name);
+                // 创建一个临时的 HTML 容器用于处理
+                const tempContainer = document.createElement('div');
+                tempContainer.innerHTML = editor.getContent();
+                const tempImages = tempContainer.querySelectorAll('img');
+
+                // 2. 遍历并压缩图片
+                // 只有当图片是 base64 (data:image) 时才处理
+                for (let i = 0; i < images.length; i++) {
+                    const originalImg = images[i];
+                    const tempImg = tempImages[i]; // 对应临时容器里的图片
+                    
+                    if (originalImg.src.startsWith('data:image')) {
+                        try {
+                            // 执行压缩
+                            const newBase64 = await compressImage(originalImg);
+                            
+                            // 清洗属性：只保留 src，去除 data-mce-src 等禅道不喜欢的属性
+                            // 使用压缩后的数据替换
+                            tempImg.setAttribute('src', newBase64);
+                            
+                            // 移除其他可能导致过滤的属性
+                            const attributes = Array.from(tempImg.attributes);
+                            attributes.forEach(attr => {
+                                if (attr.name !== 'src') {
+                                    tempImg.removeAttribute(attr.name);
+                                }
+                            });
+                        } catch (err) {
+                            console.error('压缩图片失败，保留原图:', err);
+                        }
+                    }
                 }
+
+                // 3. 获取处理后的 HTML
+                const cleanContent = tempContainer.innerHTML;
+
+                // 4. 执行原生的复制流程
+                await executeCopy(cleanContent);
                 
-                // 只加回最核心的 src，不带任何宽高样式的干扰（让禅道自己决定）
-                // 也不要加 alt，尽可能纯净
-                img.setAttribute('src', src);
+            } catch (error) {
+                console.error('处理流程出错:', error);
+                alert('处理出错，请重试');
+            } finally {
+                // 隐藏 loading
+                document.getElementById('loading-overlay').style.display = 'none';
             }
-            
-            // 获取净化后的 HTML 字符串
-            const cleanContent = doc.body.innerHTML;
+        }
 
-            // 简单检查
-            if (cleanContent.includes('<img') && !cleanContent.includes('data:image')) {
-                alert('图片数据异常，请重新截图粘贴后再试。');
-            }
-
-            // 3. 创建中转容器 (使用净化后的代码)
+        async function executeCopy(htmlContent) {
+            // 创建中转容器
             const transferDiv = document.createElement('div');
             transferDiv.contentEditable = "true";
+            // 样式设置：保证不可见但可被选中
             transferDiv.style.position = 'fixed';
             transferDiv.style.left = '0';
             transferDiv.style.top = '0';
@@ -151,11 +215,11 @@
             transferDiv.style.overflow = 'hidden';
             transferDiv.style.background = 'white';
             
-            // 注入净化后的内容
-            transferDiv.innerHTML = cleanContent;
+            // 注入内容
+            transferDiv.innerHTML = htmlContent;
             document.body.appendChild(transferDiv);
 
-            // 4. 聚焦并全选
+            // 聚焦并全选
             transferDiv.focus();
             const selection = window.getSelection();
             selection.removeAllRanges();
@@ -163,15 +227,14 @@
             range.selectNodeContents(transferDiv);
             selection.addRange(range);
 
-            // 5. 执行复制
             try {
-                // 优先 execCommand，兼容性最好
+                // 优先使用 execCommand
                 const successful = document.execCommand('copy');
                 
-                // 辅助尝试 Clipboard API (使用纯净 HTML)
+                // 尝试 Clipboard API 兜底
                 if (navigator.clipboard && navigator.clipboard.write) {
                     try {
-                        const blobHtml = new Blob([cleanContent], { type: 'text/html' });
+                        const blobHtml = new Blob([htmlContent], { type: 'text/html' });
                         const blobText = new Blob([transferDiv.innerText], { type: 'text/plain' });
                         await navigator.clipboard.write([
                             new ClipboardItem({
@@ -179,18 +242,15 @@
                                 'text/plain': blobText
                             })
                         ]);
-                    } catch(e) {
-                        console.warn('Clipboard API fallback error', e);
-                    }
+                    } catch(e) {}
                 }
                 
                 showToast(successful);
             } catch (err) {
-                console.error('复制出错:', err);
                 showToast(false);
             }
 
-            // 6. 清理
+            // 移除容器
             setTimeout(() => {
                 document.body.removeChild(transferDiv);
             }, 200);
@@ -205,14 +265,13 @@
         function showToast(success = true) {
             const msg = document.getElementById('msg');
             if (success) {
-                msg.innerText = "✅ 已生成纯净代码并复制！请去禅道粘贴";
+                msg.innerText = "✅ 已压缩优化并复制！请去禅道粘贴";
                 msg.className = "text-green-600 text-sm font-medium toast-hidden";
             } else {
                 msg.innerText = "⚠️ 复制被拦截，请手动全选内容按 Ctrl+C";
                 msg.className = "text-red-600 text-sm font-medium toast-hidden";
             }
             
-            // 重置动画
             void msg.offsetWidth;
             msg.classList.add('toast-visible');
         }
