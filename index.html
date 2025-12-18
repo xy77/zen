@@ -3,278 +3,973 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>禅道兼容</title>
-    <!-- 引入 Tailwind CSS 进行页面布局美化 -->
+    <title>洪晓答管理系统</title>
+    
+    <!-- React & DOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Ant Design CSS & JS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/antd/5.12.5/reset.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/dayjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/antd/5.12.5/antd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ant-design-icons/5.2.6/index.umd.min.js"></script>
+
+    <!-- Tailwind CSS (用于辅助布局) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 TinyMCE -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="no-referrer"></script>
+
     <style>
-        .tox-tinymce {
-            border: 1px solid #d1d5db !important;
-            border-radius: 0.5rem !important;
-            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        /* 自定义样式补充 */
+        body { margin: 0; padding: 0; background-color: #f0f2f5; }
+        .ant-layout-sider { background: #001529; }
+        .site-layout .ant-layout-header { background: #fff; padding: 0 24px; }
+        .logo {
+            height: 32px;
+            margin: 16px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-align: center;
+            line-height: 32px;
+            font-weight: bold;
+            font-size: 16px;
+            border-radius: 6px;
+            overflow: hidden;
+            white-space: nowrap;
         }
-        body {
-            background-color: #f3f4f6;
+        
+        /* 知识库卡片样式 */
+        .kb-card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 24px;
         }
-        /* 复制成功的动画 */
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
+        .kb-card {
+            position: relative;
+            height: 200px; /* 稍微增加高度以容纳更多信息 */
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s;
+            background: white;
+            border: 1px solid #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
         }
-        .toast-hidden {
+        .kb-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .kb-card-mask {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7); /* 加深一点背景以便看清按钮 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            gap: 12px;
+            flex-direction: column;
+            padding: 10px;
+        }
+        .kb-card:hover .kb-card-mask {
+            opacity: 1;
+        }
+        
+        .new-kb-card {
+            border: 1px dashed #d9d9d9;
+            background: #fafafa;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #666;
+            height: 200px;
+        }
+        .new-kb-card:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+        }
+
+        /* 隐藏下载链接的默认样式 */
+        .download-source-btn {
+            color: #1890ff;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* 强制覆盖 Upload Dragger 高度 */
+        .custom-dragger .ant-upload-drag {
+            height: 200px !important;
+        }
+        
+        /* 角色权限选择框固定高度样式 - 严格控制高度 */
+        .role-perm-select .ant-select-selector {
+            height: 100px !important;
+            min-height: 100px !important;
+            max-height: 100px !important;
+            overflow-y: auto !important;
+            align-items: flex-start !important;
+            padding-top: 4px !important;
+        }
+
+        /* 其他页面的样式 */
+        .other-page-container {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        /* 热门问题 Grid 布局 (两列) */
+        .hot-question-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .hot-question-item {
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #f0f0f0;
+            text-align: left;
+            transition: all 0.3s;
+            cursor: pointer;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+        .hot-question-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-color: #1890ff;
+            transform: translateY(-2px);
+        }
+
+        /* 弹窗列表悬浮样式 - 其他1 (Hover显示) */
+        .modal-list-item-hover {
+            padding: 12px 16px;
+            transition: background-color 0.3s;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border: 1px solid transparent;
+        }
+        .modal-list-item-hover:hover {
+            background-color: #f9faff;
+            border-color: #e6f7ff;
+        }
+        .modal-list-item-hover .modal-ask-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .modal-list-item-hover:hover .modal-ask-btn {
+            opacity: 1;
+        }
+
+        /* 弹窗列表样式 - 其他2 (常驻显示) */
+        .modal-list-item-static {
+            padding: 12px 16px;
+            transition: background-color 0.3s;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border: 1px solid #f0f0f0;
+        }
+        .modal-list-item-static:hover {
+            background-color: #f9faff;
+            border-color: #e6f7ff;
+        }
+        .modal-list-item-static .modal-ask-btn {
+            opacity: 1; /* 常驻 */
+        }
+
+        /* 手机外框模拟 - 比例缩放 */
+        .mobile-frame-container {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            transform: scale(0.85); /* 整体缩放以适应屏幕 */
+            transform-origin: top center;
+        }
+        .mobile-frame {
+            width: 478px; /* 956 / 2 */
+            height: 926px; /* 1852 / 2 */
+            border: 14px solid #1f2937;
+            border-radius: 40px;
+            background: #fff;
+            position: relative;
+            overflow: hidden; /* 关键：确保内容不溢出手机框 */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+        }
+        /* 顶部刘海模拟 */
+        .mobile-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 30px;
+            background: #1f2937;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+            z-index: 50;
+        }
+        
+        /* 手机内部自定义遮罩层 (模拟Modal) */
+        .mobile-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.45);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             opacity: 0;
             pointer-events: none;
+            transition: opacity 0.3s;
         }
-        .toast-visible {
+        .mobile-modal-overlay.active {
             opacity: 1;
-            animation: fadeOut 2s ease-in-out 1s forwards;
+            pointer-events: auto;
         }
-        /* 加载遮罩 */
-        #loading-overlay {
-            display: none;
-            background: rgba(255, 255, 255, 0.8);
-            z-index: 50;
+        .mobile-modal-content {
+            width: 90%;
+            height: 80%;
+            background: #fff;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+        .mobile-modal-overlay.active .mobile-modal-content {
+            transform: translateY(0);
         }
     </style>
 </head>
-<body class="h-screen flex flex-col items-center justify-center p-4">
+<body>
+    <div id="root"></div>
 
-    <!-- 加载中提示 -->
-    <div id="loading-overlay" class="absolute inset-0 flex items-center justify-center rounded-xl">
-        <div class="flex flex-col items-center">
-            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-2"></div>
-            <p class="text-blue-600 font-bold">正在压缩图片并生成代码...</p>
-        </div>
-    </div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { 
+            Layout, Menu, theme, Table, Tag, Space, Button, Modal, 
+            Form, Input, Select, DatePicker, message, Avatar, Dropdown,
+            Card, Upload, List, InputNumber, Tooltip, Popconfirm, Tabs, Row, Col, Statistic, Empty
+        } = antd;
+        const { 
+            UserOutlined, TeamOutlined, MenuOutlined, ReadOutlined, 
+            QuestionCircleOutlined, PlusOutlined, UploadOutlined,
+            FileTextOutlined, LogoutOutlined, InboxOutlined, DownloadOutlined,
+            EditOutlined, FolderOpenOutlined, DashboardOutlined, AppstoreOutlined,
+            SyncOutlined, RightOutlined, MobileOutlined, CloseOutlined,
+            ApartmentOutlined, DeleteOutlined, StopOutlined, CheckCircleOutlined
+        } = window['icons'];
+        const { Header, Content, Footer, Sider } = Layout;
+        const { Option } = Select;
+        const { Dragger } = Upload;
+        const { TextArea } = Input;
 
-    <div class="w-full max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden flex flex-col" style="height: 90vh;">
-        <!-- 头部 -->
-        <div class="bg-blue-600 text-white p-4 flex justify-between items-center shrink-0">
-            <div>
-                <h1 class="text-xl font-bold">禅道兼容需求编辑器</h1>
-                <p class="text-blue-100 text-sm mt-1">编写内容 -> 智能压缩复制 -> 粘贴至禅道</p>
-            </div>
-            <div class="text-xs bg-blue-700 px-3 py-1 rounded text-blue-200">
-                支持：图片自动压缩 (PNG转JPG) 以适应禅道
-            </div>
-        </div>
+        // --- 模拟数据 ---
+        const mockAccounts = [
+            { id: 1, username: 'admin', name: '系统管理员', dept: '其他', role: '管理员', createTime: '2024-01-01 10:00:00', lastActive: '2025-12-31 12:34:56', status: 'enabled' },
+            { id: 2, username: 'eco_user', name: '张三', dept: '经济科', role: '经济科', createTime: '2024-05-15 09:30:00', lastActive: '2025-12-31 12:34:56', status: 'enabled' },
+            { id: 3, username: 'soc_user', name: '李四', dept: '社会科', role: '社会科', createTime: '2024-06-20 14:20:00', lastActive: '2025-12-31 12:34:56', status: 'disabled' },
+        ];
 
-        <!-- 编辑器容器 -->
-        <div class="flex-grow p-4 bg-white overflow-hidden flex flex-col">
-            <textarea id="mytextarea">
-                <p>在此处编写您的需求描述...</p>
-                <p><strong>1. 功能点：</strong></p>
-                <ul>
-                    <li>支持直接截图粘贴 (Ctrl+V)</li>
-                    <li>点击下方按钮会自动压缩图片体积，防止粘贴失败</li>
-                </ul>
-            </textarea>
-        </div>
+        const mockDepartments = [
+            { id: 1, name: '经济科', code: 'ECO', remark: '', status: 'enabled' },
+            { id: 2, name: '社会科', code: 'SOC', remark: '', status: 'enabled' },
+            { id: 3, name: '其他', code: 'OTH', remark: '', status: 'enabled' },
+        ];
 
-        <!-- 底部操作栏 -->
-        <div class="bg-gray-50 border-t border-gray-200 p-4 shrink-0 flex justify-end items-center gap-3">
-            <span id="msg" class="text-green-600 text-sm font-medium toast-hidden">
-                ✅ 已压缩并复制！请去禅道粘贴
-            </span>
-            <button onclick="clearEditor()" class="px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors text-sm font-medium">
-                清空内容
-            </button>
-            <button onclick="copyForZentao()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow transition-transform transform active:scale-95 font-bold flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
-                压缩并复制 (推荐)
-            </button>
-        </div>
-    </div>
+        // 知识库数据增加状态字段
+        const mockKBs = [
+            { id: 1, title: '教资问答', dept: '社会科', docCount: 12, status: 'enabled' },
+            { id: 2, title: '公司设立', dept: '经济科', docCount: 45, status: 'enabled' },
+            { id: 3, title: '公司变更', dept: '经济科', docCount: 23, status: 'enabled' },
+            { id: 4, title: '公司注销', dept: '经济科', docCount: 8, status: 'disabled' },
+            { id: 5, title: '公司迁移', dept: '经济科', docCount: 15, status: 'enabled' },
+        ]; 
 
-    <script>
-        tinymce.init({
-            selector: '#mytextarea',
-            height: "100%", 
-            resize: false,  
-            branding: false, 
-            statusbar: true, 
-            menubar: false,  
-            plugins: 'lists table image link code wordcount',
-            toolbar: 'bold italic underline strikethrough | numlist bullist | table image | removeformat code',
-            
-            paste_data_images: true,
-            automatic_uploads: false,
-            images_reuse_filename: false,
-            
-            content_style: `
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #333; }
-                table { border-collapse: collapse; width: 100%; }
-                table td, table th { border: 1px solid #ccc; padding: 4px 8px; }
-                img { max-width: 100%; height: auto; display: block; margin: 4px 0; }
-            `,
+        const mockQuestions = [
+            { id: 1, content: '如何办理公司注册？', answer: '', dept: '经济科', kb: '公司设立', clicks: 1205, sort: 10, status: 'enabled' },
+            { id: 2, content: '教资面试报名时间？', answer: '每年12月和5月', dept: '社会科', kb: '教资问答', clicks: 850, sort: 5, status: 'enabled' },
+            { id: 3, content: '公司注销需要多久？', answer: '', dept: '经济科', kb: '公司注销', clicks: 750, sort: 3, status: 'enabled' },
+            { id: 4, content: '外资企业如何设立？', answer: '', dept: '经济科', kb: '公司设立', clicks: 600, sort: 2, status: 'enabled' },
+            { id: 5, content: '小学教资笔试科目？', answer: '科目一和科目二', dept: '社会科', kb: '教资问答', clicks: 550, sort: 1, status: 'enabled' },
+            { id: 6, content: '个体户怎么转企业？', answer: '', dept: '经济科', kb: '公司变更', clicks: 430, sort: 0, status: 'enabled' },
+            { id: 7, content: '公司跨区迁移流程？', answer: '', dept: '经济科', kb: '公司迁移', clicks: 320, sort: 0, status: 'enabled' },
+            { id: 8, content: '幼儿园教资面试内容？', answer: '', dept: '社会科', kb: '教资问答', clicks: 210, sort: 0, status: 'enabled' },
+            { id: 9, content: '营业执照丢失怎么办？', answer: '', dept: '经济科', kb: '公司变更', clicks: 150, sort: -15, status: 'enabled' },
+            { id: 10, content: '公司法人变更材料？', answer: '', dept: '经济科', kb: '公司变更', clicks: 120, sort: -10, status: 'enabled' },
+            { id: 11, content: '普通话证书有效期？', answer: '长期有效', dept: '社会科', kb: '教资问答', clicks: 100, sort: 0, status: 'enabled' },
+            { id: 12, content: '注册资金认缴制说明？', answer: '', dept: '经济科', kb: '公司设立', clicks: 90, sort: 0, status: 'enabled' },
+        ];
 
-            table_default_attributes: { border: '1', style: 'border-collapse: collapse; width: 100%; border-color: #ddd;' },
-            table_default_styles: { 'border-collapse': 'collapse', 'width': '100%' }
-        });
+        // --- 工具函数：下载源码 ---
+        const downloadSource = () => {
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'admin_dashboard_source.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
 
-        // 将 Base64 图片转换为压缩后的 JPEG Base64
-        function compressImage(imgElement) {
-            return new Promise((resolve) => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                // 1. 设置画布尺寸
-                canvas.width = imgElement.naturalWidth;
-                canvas.height = imgElement.naturalHeight;
+        // --- 页面组件 ---
 
-                // 2. 填充白色背景 (JPEG 不支持透明，避免 PNG 透明变黑)
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // 0. 数据看板
+        const DashboardPage = () => {
+            return (
+                <div style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>
+                    {/* 留白 */}
+                </div>
+            );
+        };
 
-                // 3. 绘制图片
-                ctx.drawImage(imgElement, 0, 0);
+        // 1. 账号管理
+        const AccountPage = () => {
+            const [data, setData] = useState(mockAccounts);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingItem, setEditingItem] = useState(null);
+            const [form] = Form.useForm();
 
-                // 4. 导出为 JPEG，质量 0.7 (兼顾清晰度和体积)
-                // 这一步能让 2MB 的 PNG 变成 200KB 的 JPG，极大增加禅道兼容性
-                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                resolve(compressedDataUrl);
-            });
-        }
+            const columns = [
+                { title: '序号', dataIndex: 'id', key: 'id', width: 80, align: 'center' },
+                { title: '用户名', dataIndex: 'username', key: 'username' },
+                { title: '姓名', dataIndex: 'name', key: 'name' },
+                { title: '科室', dataIndex: 'dept', key: 'dept', render: (text) => <Tag color={text === '其他' ? 'gold' : 'blue'}>{text}</Tag> },
+                { title: '角色', dataIndex: 'role', key: 'role' },
+                { title: '创建时间', dataIndex: 'createTime', key: 'createTime' },
+                { title: '最后活跃时间', dataIndex: 'lastActive', key: 'lastActive' },
+                { title: '状态', dataIndex: 'status', key: 'status', render: status => status === 'enabled' ? <Tag color="success">已启用</Tag> : <Tag color="error">已禁用</Tag> },
+                {
+                    title: '操作',
+                    key: 'action',
+                    render: (_, record) => (
+                        <Space size="middle">
+                            <Button type="link" size="small" onClick={() => handleEdit(record)}>编辑</Button>
+                            <Popconfirm title={`确认${record.status === 'enabled' ? '禁用' : '启用'}?`} onConfirm={() => toggleStatus(record.id)}>
+                                <Button type="link" size="small" danger={record.status === 'enabled'}>{record.status === 'enabled' ? '禁用' : '启用'}</Button>
+                            </Popconfirm>
+                            <Popconfirm title="确认删除?" onConfirm={() => handleDelete(record.id)}>
+                                <Button type="link" size="small" danger>删除</Button>
+                            </Popconfirm>
+                        </Space>
+                    ),
+                },
+            ];
 
-        async function copyForZentao() {
-            const editor = tinymce.get('mytextarea');
-            if (!editor) return;
-
-            // 显示 loading
-            document.getElementById('loading-overlay').style.display = 'flex';
-
-            try {
-                // 1. 获取编辑器内的所有图片 DOM 节点
-                // 我们直接操作 DOM，比操作字符串更准确
-                const editorBody = editor.getBody();
-                const images = editorBody.querySelectorAll('img');
-                
-                // 创建一个临时的 HTML 容器用于处理
-                const tempContainer = document.createElement('div');
-                tempContainer.innerHTML = editor.getContent();
-                const tempImages = tempContainer.querySelectorAll('img');
-
-                // 2. 遍历并压缩图片
-                // 只有当图片是 base64 (data:image) 时才处理
-                for (let i = 0; i < images.length; i++) {
-                    const originalImg = images[i];
-                    const tempImg = tempImages[i]; // 对应临时容器里的图片
-                    
-                    if (originalImg.src.startsWith('data:image')) {
-                        try {
-                            // 执行压缩
-                            const newBase64 = await compressImage(originalImg);
-                            
-                            // 清洗属性：只保留 src，去除 data-mce-src 等禅道不喜欢的属性
-                            // 使用压缩后的数据替换
-                            tempImg.setAttribute('src', newBase64);
-                            
-                            // 移除其他可能导致过滤的属性
-                            const attributes = Array.from(tempImg.attributes);
-                            attributes.forEach(attr => {
-                                if (attr.name !== 'src') {
-                                    tempImg.removeAttribute(attr.name);
-                                }
-                            });
-                        } catch (err) {
-                            console.error('压缩图片失败，保留原图:', err);
+            const handleEdit = (record) => {
+                setEditingItem(record);
+                const formData = { ...record, password: '' };
+                form.setFieldsValue(formData);
+                setIsModalOpen(true);
+            };
+            const handleDelete = (id) => {
+                setData(data.filter(item => item.id !== id));
+                message.success('删除成功');
+            };
+            const toggleStatus = (id) => {
+                setData(data.map(item => item.id === id ? { ...item, status: item.status === 'enabled' ? 'disabled' : 'enabled' } : item));
+                message.success('状态更新成功');
+            };
+            const handleOk = () => {
+                form.validateFields().then(values => {
+                    if (editingItem) {
+                        const updateData = { ...values };
+                        if (!updateData.password) {
+                            delete updateData.password;
                         }
+                        setData(data.map(item => item.id === editingItem.id ? { ...item, ...updateData } : item));
+                    } else {
+                        setData([...data, { id: data.length + 1, ...values, createTime: '2025-12-31 12:34:56', lastActive: '-', status: 'enabled' }]);
                     }
-                }
+                    setIsModalOpen(false);
+                    form.resetFields();
+                    setEditingItem(null);
+                });
+            };
 
-                // 3. 获取处理后的 HTML
-                const cleanContent = tempContainer.innerHTML;
+            return (
+                <div>
+                    <div className="mb-4 flex justify-between items-center">
+                        <h2 className="text-xl font-bold">账号管理</h2>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingItem(null); form.resetFields(); setIsModalOpen(true); }}>新增账号</Button>
+                    </div>
+                    <Table columns={columns} dataSource={data} rowKey="id" />
+                    <Modal title={editingItem ? "编辑账号" : "新增账号"} open={isModalOpen} onOk={handleOk} onCancel={() => setIsModalOpen(false)}>
+                        <Form form={form} layout="vertical">
+                            <Form.Item name="username" label="用户名" rules={[{ required: true }]}><Input disabled={!!editingItem} /></Form.Item>
+                            <Form.Item name="password" label="密码" rules={[{ required: !editingItem, message: '请输入密码' }]}><Input placeholder={editingItem ? "若不修改请留空" : "请输入密码"} /></Form.Item>
+                            <Form.Item name="name" label="姓名" rules={[{ required: true }]}><Input /></Form.Item>
+                            <Form.Item name="dept" label="科室" rules={[{ required: true }]}>
+                                <Select>
+                                    <Option value="经济科">经济科</Option>
+                                    <Option value="社会科">社会科</Option>
+                                    <Option value="其他">其他</Option>
+                                </Select>
+                            </Form.Item>
+                            <Form.Item name="role" label="角色" rules={[{ required: true }]}>
+                                <Select>
+                                    <Option value="管理员">管理员</Option>
+                                    <Option value="经济科">经济科</Option>
+                                    <Option value="社会科">社会科</Option>
+                                </Select>
+                            </Form.Item>
+                        </Form>
+                    </Modal>
+                </div>
+            );
+        };
 
-                // 4. 执行原生的复制流程
-                await executeCopy(cleanContent);
-                
-            } catch (error) {
-                console.error('处理流程出错:', error);
-                alert('处理出错，请重试');
-            } finally {
-                // 隐藏 loading
-                document.getElementById('loading-overlay').style.display = 'none';
-            }
+        // 2. 科室管理页面
+        const DeptPage = () => {
+            const [data, setData] = useState(mockDepartments);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingItem, setEditingItem] = useState(null);
+            const [form] = Form.useForm();
+
+            const columns = [
+                { title: '序号', dataIndex: 'id', width: 80, align: 'center' },
+                { title: '科室', dataIndex: 'name' },
+                { title: '科室标识', dataIndex: 'code' },
+                { title: '备注', dataIndex: 'remark' },
+                { title: '状态', dataIndex: 'status', render: status => status === 'enabled' ? <Tag color="success">已启用</Tag> : <Tag color="error">已禁用</Tag> },
+                { title: '操作', render: (_, record) => (
+                    <Space>
+                        <Button type="link" onClick={() => { setEditingItem(record); form.setFieldsValue(record); setIsModalOpen(true); }}>编辑</Button>
+                        <Popconfirm title={`确认${record.status === 'enabled' ? '禁用' : '启用'}?`} onConfirm={() => {
+                            setData(data.map(d => d.id === record.id ? { ...d, status: d.status === 'enabled' ? 'disabled' : 'enabled' } : d));
+                            message.success('操作成功');
+                        }}>
+                            <Button type="link" size="small" danger={record.status === 'enabled'}>{record.status === 'enabled' ? '禁用' : '启用'}</Button>
+                        </Popconfirm>
+                        <Popconfirm title="确认删除?" onConfirm={() => {setData(data.filter(d => d.id !== record.id)); message.success('删除成功')}}>
+                            <Button type="link" danger>删除</Button>
+                        </Popconfirm>
+                    </Space>
+                )}
+            ];
+
+            const handleOk = () => {
+                form.validateFields().then(values => {
+                    if (editingItem) setData(data.map(i => i.id === editingItem.id ? { ...i, ...values } : i));
+                    else setData([...data, { id: data.length + 1, ...values, status: 'enabled' }]);
+                    setIsModalOpen(false);
+                    form.resetFields();
+                });
+            };
+
+            return (
+                <div>
+                     <div className="mb-4 flex justify-between items-center">
+                        <h2 className="text-xl font-bold">科室管理</h2>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingItem(null); form.resetFields(); setIsModalOpen(true); }}>新增科室</Button>
+                    </div>
+                    <Table columns={columns} dataSource={data} rowKey="id" />
+                    <Modal title={editingItem ? "编辑科室" : "新增科室"} open={isModalOpen} onOk={handleOk} onCancel={() => setIsModalOpen(false)}>
+                        <Form form={form} layout="vertical">
+                            <Form.Item name="name" label="科室" rules={[{ required: true }]}><Input /></Form.Item>
+                            <Form.Item name="code" label="科室标识" rules={[{ required: true }]}><Input /></Form.Item>
+                            <Form.Item name="remark" label="备注"><Input.TextArea /></Form.Item>
+                        </Form>
+                    </Modal>
+                </div>
+            );
+        };
+
+        // 3. 角色管理 (新增状态列，过滤权限)
+        const RolePage = () => {
+            const [data, setData] = useState([
+                { id: 1, name: '管理员', code: 'admin', desc: '拥有所有权限', status: 'enabled' },
+                { id: 2, name: '经济科', code: 'eco', desc: '仅限经济科相关', status: 'enabled' },
+                { id: 3, name: '社会科', code: 'soc', desc: '仅限社会科相关', status: 'enabled' }
+            ]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [isPermModalOpen, setIsPermModalOpen] = useState(false);
+            const [editingItem, setEditingItem] = useState(null);
+            const [form] = Form.useForm();
+
+            const columns = [
+                { title: '序号', dataIndex: 'id', width: 80, align: 'center' },
+                { title: '角色名称', dataIndex: 'name' },
+                { title: '角色标识', dataIndex: 'code' },
+                { title: '描述', dataIndex: 'desc' },
+                { title: '状态', dataIndex: 'status', render: status => status === 'enabled' ? <Tag color="success">已启用</Tag> : <Tag color="error">已禁用</Tag> },
+                { title: '操作', render: (_, record) => (
+                    <Space>
+                        <Button type="link" onClick={() => setIsPermModalOpen(true)}>权限设置</Button>
+                        <Button type="link" onClick={() => { setEditingItem(record); form.setFieldsValue(record); setIsModalOpen(true); }}>编辑</Button>
+                        <Popconfirm title={`确认${record.status === 'enabled' ? '禁用' : '启用'}?`} onConfirm={() => {
+                            setData(data.map(d => d.id === record.id ? { ...d, status: d.status === 'enabled' ? 'disabled' : 'enabled' } : d));
+                            message.success('操作成功');
+                        }}>
+                            <Button type="link" size="small" danger={record.status === 'enabled'}>{record.status === 'enabled' ? '禁用' : '启用'}</Button>
+                        </Popconfirm>
+                        <Popconfirm title="确认删除?" onConfirm={() => {setData(data.filter(i=>i.id!==record.id)); message.success('删除成功')}}><Button type="link" danger>删除</Button></Popconfirm>
+                    </Space>
+                )}
+            ];
+
+            const handleOk = () => {
+                form.validateFields().then(values => {
+                    if (editingItem) setData(data.map(i => i.id === editingItem.id ? { ...i, ...values } : i));
+                    else setData([...data, { id: data.length + 1, ...values, status: 'enabled' }]);
+                    setIsModalOpen(false);
+                    form.resetFields();
+                });
+            };
+
+            return (
+                <div>
+                     <div className="mb-4 flex justify-between items-center">
+                        <h2 className="text-xl font-bold">角色管理</h2>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingItem(null); form.resetFields(); setIsModalOpen(true); }}>新增角色</Button>
+                    </div>
+                    <Table columns={columns} dataSource={data} rowKey="id" />
+                    <Modal title={editingItem ? "编辑角色" : "新增角色"} open={isModalOpen} onOk={handleOk} onCancel={() => setIsModalOpen(false)}>
+                        <Form form={form} layout="vertical">
+                            <Form.Item name="name" label="角色名称" rules={[{ required: true }]}>
+                                <Select><Option value="管理员">管理员</Option><Option value="经济科">经济科</Option><Option value="社会科">社会科</Option></Select>
+                            </Form.Item>
+                            <Form.Item name="code" label="角色标识" rules={[{ required: true }]}><Input /></Form.Item>
+                            <Form.Item name="desc" label="描述"><Input.TextArea /></Form.Item>
+                        </Form>
+                    </Modal>
+                    <Modal title="权限设置" open={isPermModalOpen} onOk={() => {message.success('权限保存成功'); setIsPermModalOpen(false);}} onCancel={() => setIsPermModalOpen(false)}>
+                        <Form layout="vertical">
+                            <Form.Item label="菜单权限" tooltip="控制用户可见的菜单项">
+                                <Select 
+                                    className="role-perm-select" 
+                                    mode="multiple" 
+                                    style={{ width: '100%' }} 
+                                    placeholder="选择菜单" 
+                                    defaultValue={['dashboard', 'account']}
+                                >
+                                    <Option value="dashboard">数据看板</Option>
+                                    <Option value="hotq">热门问题管理</Option>
+                                    <Option value="kb">知识库配置</Option>
+                                    <Option value="account">账号管理</Option>
+                                    <Option value="dept">科室管理</Option>
+                                    <Option value="role">角色管理</Option>
+                                    <Option value="menu">菜单管理</Option>
+                                </Select>
+                            </Form.Item>
+                            <Form.Item label="数据权限" tooltip="控制用户可访问的数据范围">
+                                <Select 
+                                    className="role-perm-select" 
+                                    mode="multiple" 
+                                    style={{ width: '100%' }} 
+                                    placeholder="选择科室数据范围" 
+                                    defaultValue={['ECO']}
+                                >
+                                    {mockDepartments.map(dept => (
+                                        <Option key={dept.id} value={dept.code}>{dept.name}</Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                        </Form>
+                    </Modal>
+                </div>
+            );
+        };
+
+        // 4. 菜单管理
+        const MenuPage = () => {
+            const [data, setData] = useState([
+                { id: 1, name: '数据看板', path: '/dashboard', sort: 0, status: 'enabled' },
+                { id: 2, name: '热门问题管理', path: '/hot-questions', sort: 1, status: 'enabled' },
+                { id: 3, name: '知识库配置', path: '/kb', sort: 2, status: 'enabled' },
+                { id: 4, name: '账号管理', path: '/account', sort: 3, status: 'enabled' },
+                { id: 5, name: '科室管理', path: '/dept', sort: 4, status: 'enabled' },
+                { id: 6, name: '角色管理', path: '/role', sort: 5, status: 'enabled' },
+                { id: 7, name: '菜单管理', path: '/menu', sort: 6, status: 'enabled' },
+                { id: 8, name: '其他1', path: '/other1', sort: 7, status: 'enabled' },
+                { id: 9, name: '其他2', path: '/other2', sort: 8, status: 'enabled' },
+            ]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingItem, setEditingItem] = useState(null);
+            const [form] = Form.useForm();
+
+            const columns = [
+                { title: '序号', dataIndex: 'id', width: 80, align: 'center' },
+                { title: '菜单名称', dataIndex: 'name' },
+                { title: '路由路径', dataIndex: 'path' },
+                { title: '排序', dataIndex: 'sort' },
+                { title: '状态', dataIndex: 'status', render: s => s === 'enabled' ? <Tag color="success">已启用</Tag> : <Tag>已禁用</Tag> },
+                { title: '操作', render: (_, record) => (
+                    <Space>
+                        <Button type="link" onClick={() => { setEditingItem(record); form.setFieldsValue(record); setIsModalOpen(true); }}>编辑</Button>
+                        <Popconfirm title={`确认${record.status === 'enabled' ? '禁用' : '启用'}?`} onConfirm={() => {
+                            setData(data.map(d => d.id === record.id ? { ...d, status: d.status === 'enabled' ? 'disabled' : 'enabled' } : d));
+                            message.success('操作成功');
+                        }}>
+                            <Button type="link" size="small" danger={record.status === 'enabled'}>{record.status === 'enabled' ? '禁用' : '启用'}</Button>
+                        </Popconfirm>
+                        <Popconfirm title="确认删除?" onConfirm={() => {setData(data.filter(d => d.id !== record.id)); message.success('已删除')}}><Button type="link" danger>删除</Button></Popconfirm>
+                    </Space>
+                )}
+            ];
+
+            const handleOk = () => {
+                form.validateFields().then(values => {
+                    const newItem = { ...values, status: editingItem ? editingItem.status : 'enabled' };
+                    if (editingItem) setData(data.map(i => i.id === editingItem.id ? { ...i, ...values } : i));
+                    else setData([...data, { id: data.length + 1, ...newItem }]);
+                    setIsModalOpen(false);
+                    form.resetFields();
+                });
+            };
+
+            return (
+                <div>
+                     <div className="mb-4 flex justify-between items-center">
+                        <h2 className="text-xl font-bold">菜单管理</h2>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingItem(null); form.resetFields(); setIsModalOpen(true); }}>新增菜单</Button>
+                    </div>
+                    <Table columns={columns} dataSource={data} rowKey="id" />
+                    <Modal title={editingItem ? "编辑菜单" : "新增菜单"} open={isModalOpen} onOk={handleOk} onCancel={() => setIsModalOpen(false)}>
+                         <Form form={form} layout="vertical">
+                            <Form.Item name="name" label="菜单名称" rules={[{ required: true }]}><Input /></Form.Item>
+                            <Form.Item name="path" label="路由路径" rules={[{ required: true }]}><Input /></Form.Item>
+                            <Form.Item name="sort" label="排序"><InputNumber style={{width: '100%'}} /></Form.Item>
+                        </Form>
+                    </Modal>
+                </div>
+            );
+        };
+
+        // 5. 知识库配置
+        const KBPage = () => {
+            const [kbs, setKbs] = useState(mockKBs);
+            const [isDetailOpen, setIsDetailOpen] = useState(false);
+            const [isEditOpen, setIsEditOpen] = useState(false);
+            const [currentKB, setCurrentKB] = useState(null);
+            const [editingItem, setEditingItem] = useState(null);
+            const [form] = Form.useForm();
+            const mockFiles = [{ name: '政策说明书v1.pdf', size: '2.4MB', time: '2025-01-01 10:00:00' }, { name: '申请流程图.png', size: '500KB', time: '2025-01-02 14:00:00' }];
+
+            const handleSave = () => {
+                form.validateFields().then(values => {
+                    if (editingItem) setKbs(kbs.map(k => k.id === editingItem.id ? { ...k, ...values } : k));
+                    else setKbs([{ id: Date.now(), ...values, docCount: 0, status: 'enabled' }, ...kbs]);
+                    setIsEditOpen(false);
+                    form.resetFields();
+                    message.success('保存成功');
+                });
+            };
+
+            const toggleStatus = (id) => {
+                setKbs(kbs.map(kb => kb.id === id ? { ...kb, status: kb.status === 'enabled' ? 'disabled' : 'enabled' } : kb));
+                message.success('状态更新成功');
+            };
+
+            const handleDelete = (id) => {
+                setKbs(kbs.filter(kb => kb.id !== id));
+                message.success('删除成功');
+            };
+
+            return (
+                <div>
+                    <div className="mb-6"><h2 className="text-xl font-bold mb-2">知识库配置</h2><p className="text-gray-500">管理不同科室的知识库内容</p></div>
+                    <div className="kb-card-container">
+                        <div className="kb-card new-kb-card" onClick={() => {setEditingItem(null); form.resetFields(); setIsEditOpen(true)}}><PlusOutlined style={{ fontSize: '32px', marginBottom: '10px' }} /><span className="font-bold">新增知识库</span></div>
+                        {kbs.map(kb => (
+                            <div key={kb.id} className="kb-card">
+                                <div>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-bold text-lg truncate" title={kb.title}>{kb.title}</h3>
+                                        <Tag color={kb.dept === '经济科' ? 'blue' : (kb.dept === '社会科' ? 'green' : 'default')}>{kb.dept}</Tag>
+                                    </div>
+                                    <div className="mb-2"><Tag color={kb.status === 'enabled' ? 'success' : 'error'}>{kb.status === 'enabled' ? '已启用' : '已禁用'}</Tag></div>
+                                    <div className="text-gray-400 text-sm">文档数量</div><div className="text-3xl font-bold mt-1">{kb.docCount}</div>
+                                </div>
+                                <div className="text-xs text-gray-400 mt-4">最后更新：2025-12-31 12:34:56</div>
+                                <div className="kb-card-mask">
+                                    <Space direction="vertical" style={{width: '100%', alignItems: 'center'}}>
+                                        <Button shape="round" icon={<EditOutlined />} onClick={(e) => { e.stopPropagation(); setEditingItem(kb); form.setFieldsValue(kb); setIsEditOpen(true); }}>编辑信息</Button>
+                                        <Button type="primary" shape="round" icon={<FolderOpenOutlined />} onClick={() => { setCurrentKB(kb); setIsDetailOpen(true); }}>管理文档</Button>
+                                        <Space>
+                                            <Popconfirm title={`确认${kb.status === 'enabled' ? '禁用' : '启用'}?`} onConfirm={() => toggleStatus(kb.id)}>
+                                                <Button size="small">{kb.status === 'enabled' ? '禁用' : '启用'}</Button>
+                                            </Popconfirm>
+                                            <Popconfirm title="确认删除?" onConfirm={() => handleDelete(kb.id)}>
+                                                <Button size="small" danger>删除</Button>
+                                            </Popconfirm>
+                                        </Space>
+                                    </Space>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <Modal title={currentKB ? `管理文档：${currentKB.title}` : '管理文档'} open={isDetailOpen} onCancel={() => setIsDetailOpen(false)} footer={null} width={700}>
+                        <div className="mb-4 custom-dragger">
+                            <Dragger style={{ padding: '20px', background: '#fafafa' }} height={200}>
+                                <p className="ant-upload-drag-icon"><InboxOutlined style={{fontSize: 32}} /></p>
+                                <p className="ant-upload-text">点击或拖拽文件到此处上传</p>
+                                <p className="ant-upload-hint" style={{fontSize: '12px', color: '#999'}}>仅支持.csv、.xlsx格式文件，大小不超过2.5M</p>
+                            </Dragger>
+                        </div>
+                        <List 
+                            header={
+                                <div className="flex justify-between items-center">
+                                    <div className="font-bold">已上传文档列表</div>
+                                    <a href="#" onClick={(e) => {e.preventDefault(); message.success('模板下载中...')}} style={{fontSize: '13px', color: '#1890ff'}}>下载模板</a>
+                                </div>
+                            } 
+                            bordered 
+                            dataSource={mockFiles} 
+                            renderItem={item => (
+                                <List.Item>
+                                    <List.Item.Meta avatar={<FileTextOutlined style={{ fontSize: 24, color: '#1890ff' }} />} title={item.name} description={`大小：${item.size} | 上传时间：${item.time}`} />
+                                    <Button type="link" danger>删除</Button>
+                                </List.Item>
+                            )} 
+                        />
+                    </Modal>
+                    <Modal title={editingItem ? "编辑知识库" : "新增知识库"} open={isEditOpen} onOk={handleSave} onCancel={() => setIsEditOpen(false)}>
+                        <Form form={form} layout="vertical">
+                            <Form.Item name="title" label="知识库名称" rules={[{ required: true }]} extra="此名称会显示在问答页面"><Input /></Form.Item>
+                            <Form.Item name="dept" label="所属科室" rules={[{ required: true }]}><Select><Option value="经济科">经济科</Option><Option value="社会科">社会科</Option><Option value="管理员">管理员</Option></Select></Form.Item>
+                        </Form>
+                    </Modal>
+                </div>
+            );
+        };
+
+        // 6. 热门问题管理
+        const HotQuestionPage = () => {
+            const [data, setData] = useState(mockQuestions);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingItem, setEditingItem] = useState(null);
+            const [form] = Form.useForm();
+
+            const getColor = (text) => {
+                const colors = ['blue', 'cyan', 'green', 'geekblue', 'purple', 'magenta', 'volcano', 'orange', 'gold', 'lime'];
+                let hash = 0;
+                for (let i = 0; i < text.length; i++) hash = text.charCodeAt(i) + ((hash << 5) - hash);
+                return colors[Math.abs(hash) % colors.length];
+            };
+
+            const columns = [
+                { title: '序号', dataIndex: 'id', width: 60, align: 'center' },
+                { title: '问题内容', dataIndex: 'content', width: 250, ellipsis: true },
+                { title: '回答内容', dataIndex: 'answer', width: 200, ellipsis: true, render: t => t || <span className="text-gray-400 italic">基于知识库回答</span> },
+                { title: '关联科室', dataIndex: 'dept', width: 120, render: t => <Tag color={t === '经济科' ? 'blue' : (t === '社会科' ? 'green' : 'default')}>{t}</Tag> },
+                { title: '关联知识库', dataIndex: 'kb', width: 130, render: t => <Tag color={getColor(t)}>{t}</Tag> },
+                { title: '点击量', dataIndex: 'clicks', width: 100 },
+                { title: '排序加成', dataIndex: 'sort', width: 100, render: t => <span style={{color: t > 0 ? 'red' : (t < 0 ? 'green' : 'inherit')}}>{t > 0 ? `+${t}` : t}</span> },
+                { title: '状态', dataIndex: 'status', width: 100, render: s => s === 'enabled' ? <Tag color="success">已启用</Tag> : <Tag color="error">已禁用</Tag> },
+                { title: '操作', width: 200, render: (_, record) => (
+                    <Space size="small">
+                        <Button type="link" size="small" style={{padding: 0}} onClick={() => { setEditingItem(record); form.setFieldsValue(record); setIsModalOpen(true); }}>编辑</Button>
+                        <Popconfirm title="确认操作?" onConfirm={() => {setData(data.map(d => d.id === record.id ? { ...d, status: d.status === 'enabled' ? 'disabled' : 'enabled' } : d)); message.success('操作成功')}}>
+                            <Button type="link" size="small" style={{padding: 0}} danger={record.status === 'enabled'}>{record.status === 'enabled' ? '禁用' : '启用'}</Button>
+                        </Popconfirm>
+                        <Popconfirm title="确认删除该问题?" onConfirm={() => {setData(data.filter(item => item.id !== record.id)); message.success('删除成功')}}>
+                            <Button type="link" size="small" style={{padding: 0}} danger>删除</Button>
+                        </Popconfirm>
+                    </Space>
+                )}
+            ];
+
+            const handleOk = () => {
+                form.validateFields().then(values => {
+                    if (editingItem) setData(data.map(d => d.id === editingItem.id ? { ...d, ...values } : d));
+                    else setData([...data, { id: data.length + 1, ...values, clicks: 0, status: 'enabled' }]);
+                    setIsModalOpen(false); form.resetFields();
+                });
+            };
+
+            return (
+                <div>
+                     <div className="mb-4 flex justify-between items-center"><h2 className="text-xl font-bold">热门问题管理</h2><Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingItem(null); form.resetFields(); setIsModalOpen(true); }}>新增问题</Button></div>
+                    <Table columns={columns} dataSource={data} rowKey="id" />
+                    <Modal title={editingItem ? "编辑问题" : "新增问题"} open={isModalOpen} onOk={handleOk} onCancel={() => setIsModalOpen(false)}>
+                        <Form form={form} layout="vertical">
+                            <Form.Item name="content" label="问题内容" rules={[{ required: true }]}><Input /></Form.Item>
+                            <Form.Item name="answer" label="回答内容" extra={<span className="text-xs text-gray-400">不填写时该问题将基于知识库回答</span>}><Input.TextArea placeholder="非必填" /></Form.Item>
+                            <Form.Item name="dept" label="关联科室" rules={[{ required: true }]}><Select><Option value="经济科">经济科</Option><Option value="社会科">社会科</Option></Select></Form.Item>
+                            <Form.Item name="kb" label="关联知识库" rules={[{ required: true }]}><Select>{mockKBs.map(k => <Option key={k.id} value={k.title}>{k.title}</Option>)}</Select></Form.Item>
+                            <Form.Item name="sort" label="排序加成" extra={<span className="text-xs text-gray-400">请填写整数，正值为增加，负值为减少</span>}><InputNumber style={{width: '100%'}} placeholder="0" /></Form.Item>
+                        </Form>
+                    </Modal>
+                </div>
+            );
+        };
+
+        // 7. 其他1页面
+        const OtherPage1 = () => {
+            const [currentBatch, setCurrentBatch] = useState(0);
+            const [isAllModalOpen, setIsAllModalOpen] = useState(false);
+            const [hasClickedChange, setHasClickedChange] = useState(false);
+            const pageSize = 4;
+
+            const handleRotate = () => {
+                const maxBatch = Math.ceil(mockQuestions.length / pageSize);
+                setCurrentBatch((prev) => (prev + 1) % maxBatch);
+                setHasClickedChange(true);
+            };
+
+            const currentQuestions = mockQuestions.slice(currentBatch * pageSize, (currentBatch + 1) * pageSize);
+
+            return (
+                <div className="other-page-container">
+                    <div className="mb-8" style={{ height: '300px' }}></div>
+                    <div className="flex justify-between items-center mb-4 px-2">
+                        <h3 className="text-lg font-bold text-gray-800">热门问题</h3>
+                        <div className="cursor-pointer text-blue-500 flex items-center gap-1 hover:text-blue-700 select-none" onClick={handleRotate}><SyncOutlined spin={false} /> 换一换</div>
+                    </div>
+                    <div className="hot-question-grid">{currentQuestions.map(q => (<div key={q.id} className="hot-question-item"><div className="font-medium text-gray-800">{q.content}</div></div>))}</div>
+                    {hasClickedChange && (<div className="text-center"><span className="cursor-pointer text-gray-500 hover:text-blue-500 border border-gray-300 px-6 py-2 rounded-full hover:border-blue-500 transition" onClick={() => setIsAllModalOpen(true)}>查看全部问题</span></div>)}
+                    <Modal title="所有热门问题" open={isAllModalOpen} onCancel={() => setIsAllModalOpen(false)} footer={null} width={800} style={{ top: '10vh' }} bodyStyle={{ height: 'calc(80vh - 110px)', overflowY: 'auto' }}>
+                         <div className="pr-2">
+                            {mockQuestions.map(item => (
+                                <div key={item.id} className="modal-list-item-hover">
+                                    <div className="flex items-center gap-2"><QuestionCircleOutlined className="text-blue-500" /><span>{item.content}</span></div>
+                                    <Button type="primary" size="small" className="modal-ask-btn" onClick={() => message.info(`正在跳转提问: ${item.content}`)}>去提问</Button>
+                                </div>
+                            ))}
+                            <div className="text-center text-gray-400 text-xs py-4">没有更多内容了</div>
+                        </div>
+                    </Modal>
+                </div>
+            );
         }
 
-        async function executeCopy(htmlContent) {
-            // 创建中转容器
-            const transferDiv = document.createElement('div');
-            transferDiv.contentEditable = "true";
-            // 样式设置：保证不可见但可被选中
-            transferDiv.style.position = 'fixed';
-            transferDiv.style.left = '0';
-            transferDiv.style.top = '0';
-            transferDiv.style.opacity = '0.01'; 
-            transferDiv.style.zIndex = '999999';
-            transferDiv.style.width = '100%';
-            transferDiv.style.height = '100%';
-            transferDiv.style.overflow = 'hidden';
-            transferDiv.style.background = 'white';
-            
-            // 注入内容
-            transferDiv.innerHTML = htmlContent;
-            document.body.appendChild(transferDiv);
+        // 8. 其他2页面 (手机模拟)
+        const OtherPage2 = () => {
+            const [currentBatch, setCurrentBatch] = useState(0);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [hasClickedChange, setHasClickedChange] = useState(false);
+            const pageSize = 4;
 
-            // 聚焦并全选
-            transferDiv.focus();
-            const selection = window.getSelection();
-            selection.removeAllRanges();
-            const range = document.createRange();
-            range.selectNodeContents(transferDiv);
-            selection.addRange(range);
+            const handleRotate = () => {
+                const maxBatch = Math.ceil(mockQuestions.length / pageSize);
+                setCurrentBatch((prev) => (prev + 1) % maxBatch);
+                setHasClickedChange(true);
+            };
 
-            try {
-                // 优先使用 execCommand
-                const successful = document.execCommand('copy');
-                
-                // 尝试 Clipboard API 兜底
-                if (navigator.clipboard && navigator.clipboard.write) {
-                    try {
-                        const blobHtml = new Blob([htmlContent], { type: 'text/html' });
-                        const blobText = new Blob([transferDiv.innerText], { type: 'text/plain' });
-                        await navigator.clipboard.write([
-                            new ClipboardItem({
-                                'text/html': blobHtml,
-                                'text/plain': blobText
-                            })
-                        ]);
-                    } catch(e) {}
-                }
-                
-                showToast(successful);
-            } catch (err) {
-                showToast(false);
-            }
+            const currentQuestions = mockQuestions.slice(currentBatch * pageSize, (currentBatch + 1) * pageSize);
 
-            // 移除容器
-            setTimeout(() => {
-                document.body.removeChild(transferDiv);
-            }, 200);
+            return (
+                <div className="mobile-frame-container">
+                    <div className="mobile-frame">
+                        <div className="mobile-notch"></div>
+                        <div style={{padding: '20px', paddingTop: '60px', overflowY: 'auto', flex: 1}}>
+                            <div className="mb-6" style={{ height: '200px' }}></div>
+                            <div className="flex justify-between items-center mb-4 px-1">
+                                <h3 className="text-base font-bold text-gray-800">热门问题</h3>
+                                <div className="cursor-pointer text-blue-500 flex items-center gap-1 hover:text-blue-700 select-none text-sm" onClick={handleRotate}><SyncOutlined spin={false} /> 换一换</div>
+                            </div>
+                            <div className="hot-question-grid" style={{gridTemplateColumns: '1fr', gap: '10px'}}>
+                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
+                                    {currentQuestions.map(q => (<div key={q.id} className="hot-question-item" style={{fontSize: '12px', padding: '10px'}}><div className="font-medium text-gray-800 line-clamp-2">{q.content}</div></div>))}
+                                </div>
+                            </div>
+                            {hasClickedChange && (<div className="text-center mt-6"><span className="cursor-pointer text-gray-500 hover:text-blue-500 border border-gray-300 px-4 py-1.5 rounded-full hover:border-blue-500 transition text-sm" onClick={() => setIsModalOpen(true)}>查看全部问题</span></div>)}
+                        </div>
+                        <div className={`mobile-modal-overlay ${isModalOpen ? 'active' : ''}`} onClick={() => setIsModalOpen(false)}>
+                            <div className="mobile-modal-content" onClick={e => e.stopPropagation()}>
+                                <div className="flex justify-between items-center p-4 border-b border-gray-100">
+                                    <h3 className="font-bold text-lg">所有热门问题</h3>
+                                    <CloseOutlined className="text-gray-400 cursor-pointer p-2" onClick={() => setIsModalOpen(false)} />
+                                </div>
+                                <div style={{flex: 1, overflowY: 'auto', padding: '10px'}}>
+                                    {mockQuestions.map(item => (
+                                        <div key={item.id} className="modal-list-item-static">
+                                            <div className="flex items-center gap-2" style={{maxWidth: '70%'}}><QuestionCircleOutlined className="text-blue-500" /><span className="truncate text-sm">{item.content}</span></div>
+                                            <Button type="primary" size="small" className="modal-ask-btn" onClick={() => message.info(`正在跳转提问: ${item.content}`)}>去提问</Button>
+                                        </div>
+                                    ))}
+                                    <div className="text-center text-gray-400 text-xs py-4">没有更多内容了</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
         }
 
-        function clearEditor() {
-            if(confirm('确定要清空所有内容吗？')) {
-                tinymce.get('mytextarea').setContent('');
-            }
-        }
+        // --- 主布局 ---
+        const App = () => {
+            const [currentKey, setCurrentKey] = useState('0');
+            const [collapsed, setCollapsed] = useState(false);
 
-        function showToast(success = true) {
-            const msg = document.getElementById('msg');
-            if (success) {
-                msg.innerText = "✅ 已压缩优化并复制！请去禅道粘贴";
-                msg.className = "text-green-600 text-sm font-medium toast-hidden";
-            } else {
-                msg.innerText = "⚠️ 复制被拦截，请手动全选内容按 Ctrl+C";
-                msg.className = "text-red-600 text-sm font-medium toast-hidden";
-            }
-            
-            void msg.offsetWidth;
-            msg.classList.add('toast-visible');
-        }
+            const menuItems = [
+                { key: '0', icon: <DashboardOutlined />, label: '数据看板' },
+                { key: '5', icon: <QuestionCircleOutlined />, label: '热门问题管理' },
+                { key: '4', icon: <ReadOutlined />, label: '知识库配置' },
+                { key: '1', icon: <TeamOutlined />, label: '账号管理' },
+                { key: '8', icon: <ApartmentOutlined />, label: '科室管理' },
+                { key: '2', icon: <UserOutlined />, label: '角色管理' },
+                { key: '3', icon: <MenuOutlined />, label: '菜单管理' },
+                { key: '6', icon: <AppstoreOutlined />, label: '其他1' },
+                { key: '7', icon: <MobileOutlined />, label: '其他2' },
+            ];
+
+            const userMenu = (<Menu items={[{ key: 'logout', label: '退出登录', icon: <LogoutOutlined />, onClick: () => message.info('已退出登录') }]} />);
+
+            return (
+                <Layout style={{ minHeight: '100vh' }}>
+                    <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
+                        <div className="logo">洪晓答管理系统</div>
+                        <Menu theme="dark" defaultSelectedKeys={['0']} mode="inline" items={menuItems} onClick={(e) => setCurrentKey(e.key)} />
+                    </Sider>
+                    <Layout className="site-layout flex flex-col">
+                        <Header className="flex justify-end items-center shadow-sm z-10">
+                             <Space size="large">
+                                <a className="download-source-btn" onClick={downloadSource}><DownloadOutlined /> 下载本页源码 (HTML)</a>
+                                <Dropdown overlay={userMenu}><div className="flex items-center cursor-pointer hover:bg-gray-100 px-3 py-1 rounded transition"><Avatar style={{ backgroundColor: '#87d068' }} icon={<UserOutlined />} /><span className="ml-2 font-medium">admin</span></div></Dropdown>
+                            </Space>
+                        </Header>
+                        <Content style={{ margin: '24px 16px', padding: 24, background: '#fff', minHeight: 280, borderRadius: '8px', overflowY: 'auto' }}>
+                            {currentKey === '0' && <DashboardPage />}
+                            {currentKey === '1' && <AccountPage />}
+                            {currentKey === '8' && <DeptPage />}
+                            {currentKey === '2' && <RolePage />}
+                            {currentKey === '3' && <MenuPage />}
+                            {currentKey === '4' && <KBPage />}
+                            {currentKey === '5' && <HotQuestionPage />}
+                            {currentKey === '6' && <OtherPage1 />}
+                            {currentKey === '7' && <OtherPage2 />}
+                        </Content>
+                        <Footer style={{ textAlign: 'center', fontSize: '12px', color: '#9ca3af', lineHeight: '1.6' }}><div>本服务内容由AI提供，仅供参考</div><div>技术支持：武汉木瓜法宝科技有限公司</div></Footer>
+                    </Layout>
+                </Layout>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
